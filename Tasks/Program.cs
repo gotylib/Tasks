@@ -41,9 +41,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowSpecificOrigins");
-app.UseHttpsRedirection();
 
-app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
 {
