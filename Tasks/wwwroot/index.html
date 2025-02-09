@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запланированные задачи</title>
+    <style>
+        /* Подключаем внешний шрифт */
+        @import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
+
+        /* Общие настройки для всего */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Inter", sans-serif;
+            background-color: #f4f4f4;
+            color: #333333;
+        }
+
+        /* Внутренний блок */
+        .gridDiv {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 60px auto;
+            padding: 0 16px;
+        }
+
+        /* Кнопка "Добавить задачу" */
+        .add-task-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin: 20px;
+        }
+
+        .add-task-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Карточка задачи */
+        .note {
+            background-color: #ffffff;
+            border: 1px solid #ebebeb;
+            border-radius: 8px;
+            box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 4px;
+            padding: 16px;
+            transition: all 300ms ease-in-out;
+            position: relative;
+        }
+
+        .note:hover {
+            border-color: #007bff;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+        }
+
+        .note h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            color: #333333;
+            word-wrap: break-word; /* Allows breaking words if necessary */
+            overflow-wrap: break-word; /* Standardized version of word-wrap */
+        }
+
+        .note p {
+            margin: 0 0 8px;
+            color: #555555;
+            font-size: 14px;
+            word-wrap: break-word; /* Allows breaking words if necessary */
+            overflow-wrap: break-word; /* Standardized version of word-wrap */
+        }
+
+        .note .delete-btn, .note .edit-btn {
+            position: absolute;
+            top: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            color: #ff5252;
+            transition: color 0.3s ease;
+            background: none;
+            border: none;
+        }
+
+        .note .delete-btn {
+            right: 10px;
+        }
+
+        .note .edit-btn {
+            right: 40px;
+            color: #007bff;
+        }
+
+        .note .delete-btn:hover, .note .edit-btn:hover {
+            color: #ff0000;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal h2 {
+            margin: 0 0 16px;
+            font-size: 20px;
+            color: #333333;
+        }
+
+        .modal input,
+        .modal textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ebebeb;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .modal textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+            margin-right: 8px;
+        }
+
+        .modal button:last-child {
+            background-color: #ccc;
+        }
+
+        .modal button:hover {
+            background-color: #0056b3;
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .modal-backdrop.show {
+            display: block;
+        }
+
+        /* Media query for mobile devices */
+        @media (max-width: 600px) {
+            .modal {
+                margin-left: 10px;
+                margin-right: 10px;
+                width: calc(100% - 20px); /* Adjust width to account for margins */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <button class="add-task-btn" onclick="openModal()">Добавить задачу</button>
+</div>
+
+<div class="gridDiv" id="taskList">
+    <!-- Задачи будут добавляться сюда -->
+</div>
+
+<div class="modal" id="taskModal">
+    <h2 id="modalTitle">Добавить задачу</h2>
+    <input type="hidden" id="taskId">
+    <input type="text" id="taskName" placeholder="Название задачи" required>
+    <textarea id="taskDescription" placeholder="Описание задачи" required></textarea>
+    <input type="datetime-local" id="taskDateTime" required>
+    <div style="text-align: right;">
+        <button onclick="saveTask()">Сохранить</button>
+        <button onclick="closeModal()">Отмена</button>
+    </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"></div>
+
+<script>
+    const baseUrl = 'http://localhost:8080/Tasks';
+
+    async function fetchTasks() {
+        try {
+            const response = await fetch(`${baseUrl}/GetTasks`);
+            const tasks = await response.json();
+            displayTasks(tasks);
+        } catch (error) {
+            console.error('Ошибка при получении задач:', error);
+        }
+    }
+
+    function displayTasks(tasks) {
+        const taskList = document.getElementById('taskList');
+        taskList.innerHTML = '';
+        tasks.forEach(task => {
+            const taskDiv = document.createElement('div');
+            taskDiv.classList.add('note');
+            taskDiv.setAttribute('data-id', task.id);
+            taskDiv.innerHTML = `
+                <h3>${task.name}</h3>
+                <p>${task.description}</p>
+                <p>${new Date(task.taskDateTime).toLocaleString()}</p>
+                <button class="edit-btn" onclick="openEditModal(${task.id})">✎</button>
+                <button class="delete-btn" onclick="deleteTask(${task.id})">✖</button>
+            `;
+            taskList.appendChild(taskDiv);
+        });
+    }
+
+    async function saveTask() {
+        const taskId = document.getElementById('taskId').value || 0;
+        const taskName = document.getElementById('taskName').value;
+        const taskDescription = document.getElementById('taskDescription').value;
+        const taskDateTime = new Date(document.getElementById('taskDateTime').value).toISOString();
+
+        const taskData = {
+            id: taskId,
+            name: taskName,
+            description: taskDescription,
+            taskDateTime: taskDateTime
+        };
+
+        try {
+            const response = await fetch(taskId ? `${baseUrl}/UpdateTask` : `${baseUrl}/AddTask`, {
+                method: taskId ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (response.ok) {
+                closeModal();
+                fetchTasks();
+                resetModal();
+            } else {
+                console.error('Ошибка при сохранении задачи:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Ошибка при сохранении задачи:', error);
+        }
+    }
+
+    async function deleteTask(id) {
+        try {
+            const response = await fetch(`${baseUrl}/DeleteTask/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                fetchTasks();
+            } else {
+                console.error('Ошибка при удалении задачи:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Ошибка при удалении задачи:', error);
+        }
+    }
+
+    function openModal(taskId = null) {
+        document.getElementById('taskModal').classList.add('show');
+        document.getElementById('modalBackdrop').classList.add('show');
+        if (taskId) {
+            document.getElementById('modalTitle').textContent = 'Редактировать задачу';
+        } else {
+            document.getElementById('modalTitle').textContent = 'Добавить задачу';
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('taskModal').classList.remove('show');
+        document.getElementById('modalBackdrop').classList.remove('show');
+        resetModal();
+    }
+
+    function resetModal() {
+        document.getElementById('taskId').value = '';
+        document.getElementById('taskName').value = '';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskDateTime').value = '';
+    }
+
+    async function openEditModal(taskId) {
+        try {
+            const response = await fetch(`${baseUrl}/GetTasks`);
+            const tasks = await response.json();
+            const task = tasks.find(t => t.id === taskId);
+
+            if (task) {
+                document.getElementById('taskId').value = task.id;
+                document.getElementById('taskName').value = task.name;
+                document.getElementById('taskDescription').value = task.description;
+                document.getElementById('taskDateTime').value = task.taskDateTime.replace(' ', 'T');
+                openModal(taskId);
+            }
+        } catch (error) {
+            console.error('Ошибка при получении данных задачи для редактирования:', error);
+        }
+    }
+
+    // Fetch tasks when the page loads
+    fetchTasks();
+</script>
+
+</body>
+</html>

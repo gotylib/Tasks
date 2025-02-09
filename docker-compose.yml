@@ -1,0 +1,18 @@
+services:
+  tasks:
+    image: tasks
+    ports:
+      - 8080:8080
+      - 8081:8081
+    build:
+      context: .
+      dockerfile: Tasks/Dockerfile
+  db:
+    container_name: db
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: Tasks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5435:5432"
